@@ -1,0 +1,7 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+TELETHON_API_HASH = os.getenv("TELETHON_API_HASH",str)
+TELETHON_API_ID = os.getenv("TELETHON_API_ID",int)

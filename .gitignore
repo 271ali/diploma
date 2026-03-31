@@ -1,0 +1,5 @@
+.env
+train/
+.venv/
+.idea/
+**/__pycache__/
