@@ -1,8 +1,8 @@
 from telethon import TelegramClient
+from telethon.errors import SessionPasswordNeededError
 from telethon.sessions import StringSession
 from core.config import TELETHON_API_ID, TELETHON_API_HASH
 from core.logger import logger
-import os
 
 class TgClient:
     @staticmethod
@@ -15,14 +15,64 @@ class TgClient:
              """
         return TelegramClient(session, TELETHON_API_ID, TELETHON_API_HASH)
 
+    @classmethod
+    async def send_auth_code(cls, phone: str):
+        client = cls._create_client()
+        await client.connect()
+        try:
+            result = await client.send_code_request(phone)
+            temp_session = client.session.save()
+            return {
+                "phone_code_hash": result.phone_code_hash,
+                "temp_session": temp_session,
+                "status": "code_sent"
+            }
+        finally:
+            await client.disconnect()
 
     @classmethod
-    async def login_and_save(cls):
-        async with cls._create_client() as client:
+    async def login(cls, phone: str, code: str, phone_code_hash: str, temp_session: str, password: str = None):
+        client = cls._create_client(temp_session)
+        await client.connect()
+        try:
+            if password:
+                await client.sign_in(password=password)
+            else:
+                await client.sign_in(phone, code, phone_code_hash=phone_code_hash)
+            final_session = client.session.save()
             me = await client.get_me()
-            session_str = client.session.save()
-            logger.info(f"Client {me.id} successfully saved session: {session_str}")
-            return session_str, me.id
+            return {"status": "success", "session": final_session, "user_id": me.id}
+
+        except SessionPasswordNeededError:
+            return {"status": "need_password"}
+        except Exception as e:
+            logger.error(f"Ошибка при входе: {e}")
+            return {"status": "error", "message": str(e)}
+        finally:
+            await client.disconnect()
+
+    @classmethod
+    async def sign_in(cls,phone, code, phone_code_hash, session_str):
+        client = cls._create_client(session_str)
+        await client.connect()
+        await client.sign_in(phone, code, phone_code_hash=phone_code_hash)
+        return client.session.save()
+
+    @classmethod
+    async def check_authorization(cls, session_str: str):
+        if not session_str:
+            return False
+
+        client = cls._create_client(session_str)
+        await client.connect()
+        try:
+            authorized = await client.is_user_authorized()
+            return authorized
+        except Exception as e:
+            logger.error(f"Ошибка проверки авторизации: {e}")
+            return False
+        finally:
+            await client.disconnect()
 
     @classmethod
     async def get_chats(cls, session_str: str):
@@ -41,26 +91,16 @@ class TgClient:
     async def get_messages(cls, session_str: str, target_chat: int, limit: int = 100):
         async with cls._create_client(session_str) as client:
             messages_data = []
-            async for message in client.iter_messages(target_chat, limit=limit):
+            async for message in client.iter_messages(target_chat):
+                if len(messages_data) >= limit:
+                    break
+                if not message.text:
+                    continue
                 msg_info = {
                     "date": message.date,
                     "sender_id": message.sender_id,
                     "text": message.text
                 }
                 messages_data.append(msg_info)
-                logger.info(f"[{message.date}] ID автора: {message.sender_id} | Текст: {message.text[:30]}...")
+                logger.info(f"[{message.date}] ID автора: {message.sender_id} | Текст: {message.text}...")
             return messages_data
-
-
-"""Для FastAPI
-async def send_auth_code(phone):
-    client = TgClient._create_client()
-    await client.connect()
-    phone_code_hash = (await client.send_code_request(phone)).phone_code_hash
-    return phone_code_hash, client.session.save() 
-
-async def sign_in(phone, code, phone_code_hash, session_str):
-    client = TgClient._create_client(session_str)
-    await client.connect()
-    await client.sign_in(phone, code, phone_code_hash=phone_code_hash)
-    return client.session.save()"""
