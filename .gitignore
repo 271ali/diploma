@@ -3,3 +3,4 @@ train/
 .venv/
 .idea/
 **/__pycache__/
+backend/db/.env_db
