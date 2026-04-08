@@ -6,3 +6,7 @@ pydantic
 telethon
 asyncpg
 aiogram
+asyncpg
+psycopg2
+psycopg2-binary
+pydantic-settings
