@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Вход — Telegram Analytics</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="steps" id="steps">
+        <div class="step active" data-i="0"></div>
+        <div class="step" data-i="1"></div>
+        <div class="step" data-i="2"></div>
+      </div>
+      <h1 id="title">Вход в аккаунт</h1>
+      <p class="sub" id="subtitle">Укажите номер телефона, привязанный к Telegram</p>
+      <div class="err" id="err"></div>
+
+      <form id="form-phone">
+        <div class="field">
+          <label for="phone">Телефон</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+375-29-123-45-67" required />
+        </div>
+        <button type="submit" class="btn" id="btn-phone">Получить код</button>
+      </form>
+
+      <form id="form-code" class="hidden">
+        <div class="field">
+          <label for="code">Код из Telegram</label>
+          <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="12345" required />
+        </div>
+        <button type="submit" class="btn" id="btn-code">Войти</button>
+        <button type="button" class="btn btn-ghost" id="back-phone">Изменить номер</button>
+      </form>
+
+      <form id="form-2fa" class="hidden">
+        <div class="field">
+          <label for="password">Облачный пароль (2FA)</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Пароль двухфакторной аутентификации" required />
+        </div>
+        <button type="submit" class="btn" id="btn-2fa">Подтвердить</button>
+      </form>
+    </div>
+  </div>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>
