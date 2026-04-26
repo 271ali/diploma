@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import text, ForeignKey,String, BigInteger
+from sqlalchemy import text, ForeignKey,String, BigInteger, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped,mapped_column, relationship
 from typing import Annotated, Optional
 
@@ -46,17 +46,18 @@ class Chats(Base):
     updated_at:Mapped[date_time]
     messages: Mapped[list["Messages"]] = relationship(
         back_populates="chat",
-        primary_join="Chats.id==Messages.chat_id",
+        primaryjoin="Chats.id==Messages.chat_id",
         cascade="all, delete-orphan"
     )
     knowledge_base: Mapped[list["KnowledgeBase"]] = relationship(
         back_populates="chat",
-        primary_join="Chats.id==KnowledgeBase.chat_id",
+        primaryjoin="Chats.id==KnowledgeBase.chat_id",
         cascade="all, delete-orphan"
     )
-    participants: Mapped[list["Participants"]] = relationship(back_populates="chat",
-                                                              primary_join="Chats.id==Participants.chat_id"
-                                                              )
+    participants: Mapped[list["Participants"]] = relationship(
+        secondary="chat_participants",
+        back_populates="chats",
+    )
     app_users: Mapped[list["Users"]] = relationship(
         secondary="user_app_chats",
         back_populates="chats"
@@ -66,8 +67,8 @@ class Chats(Base):
 class Participants(Base):
     __tablename__ = 'participants'
     id: Mapped[int_pk]
-    username: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_tg_id: Mapped[str]
+    user_tg_id: Mapped[tg_id]
+    username: Mapped[str]
     chats: Mapped[list["Chats"]] = relationship(
         secondary="chat_participants",
         back_populates="participants"
@@ -106,8 +107,8 @@ class Messages(Base):
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"
     id: Mapped[int_pk]
-    question_text: Mapped[str] = mapped_column(text)
-    answer_text: Mapped[str] = mapped_column(text)
+    question_text: Mapped[str] = mapped_column(Text)
+    answer_text: Mapped[str] = mapped_column(Text)
 
     category: Mapped[Optional[str]]
     created_at: Mapped[date_time]

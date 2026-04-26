@@ -28,6 +28,7 @@ async def run_test():
     if login_result["status"] == "need_password":
         print("У вас установлена двухфакторная аутентификация.")
         password = input("Введите ваш облачный пароль: ")
+        temp_session = login_result["temp_session"]
         login_result = await TgClient.login(
             phone=phone,
             code=code,

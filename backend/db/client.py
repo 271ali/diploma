@@ -1,17 +1,18 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    create_engine, URL, text, insert, MetaData, ForeignKey, func, String, select, update, func, cast, \
+    create_engine, URL, text, MetaData, ForeignKey, func, String, select, update, func, cast, \
     Integer, and_, Index, CheckConstraint, delete)
 from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase, Mapped, mapped_column, aliased, relationship, \
     joinedload, selectinload, contains_eager
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from typing import Annotated, Optional
+from sqlalchemy.dialects.postgresql import insert
 
-from config import setting
+from backend.db.config import setting
 import asyncio
 import enum
-from models import Base, Users, Chats, Messages, KnowledgeBase, Participants, ChatParticipant, UserAppChats
+from backend.db.models import Base, Users, Chats, Messages, KnowledgeBase, Participants, ChatParticipant, UserAppChats
 
 #добавить логгер
 
@@ -42,19 +43,31 @@ class DatabaseClient:
                             EXECUTE FUNCTION update_updated_at_column();
                         """))
 
-    async def add_user(self, user_tg_id, username=None, session_string=None):
+    async def add_user(self, user_tg_id: int, username: str = None, session_string: str = None):
         update_dict = {}
-        if username: update_dict['username'] = username
-        if session_string: update_dict['session_string'] = session_string
+        if username:
+            update_dict['username'] = username
+        if session_string:
+            update_dict['session_string'] = session_string
+
         async with self.async_session_factory() as session:
             stmt = insert(Users).values(
                 user_tg_id=user_tg_id,
                 username=username,
                 session_string=session_string,
-            ).on_conflict_do_update(
-                index_elements=['user_tg_id'],
-                set_=update_dict
             )
+            print(stmt)
+            print(update_dict)
+
+            if update_dict:
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=['user_tg_id'],
+                    set_=update_dict
+                )
+            else:
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=['user_tg_id']
+                )
             await session.execute(stmt)
             await session.commit()
 
@@ -133,14 +146,11 @@ class DatabaseClient:
 
 
 
-    async def get_session(self, user_tg_id):
+    async def get_user_by_tg_id(self, tg_id):
         async with self.async_session_factory() as session:
-            query = (
-                select(Users.session_string,)
-                .where(Users.user_tg_id==user_tg_id)
-            )
+            query = select(Users).where(Users.user_tg_id == tg_id)
             res = await session.execute(query)
-            return res.first()[0]
+            return res.scalar_one_or_none()
 
 
     async def get_chats(self, user_tg_id):
@@ -221,3 +231,7 @@ class DatabaseClient:
             stmt = delete(Chats).where(Chats.chat_tg_id == chat_tg_id)
             await session.execute(stmt)
             await session.commit()
+
+
+client=DatabaseClient()
+#asyncio.run(client.create_tables())

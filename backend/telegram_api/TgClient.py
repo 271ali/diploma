@@ -41,10 +41,14 @@ class TgClient:
                 await client.sign_in(phone, code, phone_code_hash=phone_code_hash)
             final_session = client.session.save()
             me = await client.get_me()
-            return {"status": "success", "session": final_session, "user_id": me.id}
+            return {"status": "success", "session": final_session, "user_id": me.id, "username": me.username}
 
         except SessionPasswordNeededError:
-            return {"status": "need_password"}
+            temp_after_2fa = client.session.save()
+            return {
+                "status": "need_password",
+                "temp_session": temp_after_2fa,
+            }
         except Exception as e:
             logger.error(f"Ошибка при входе: {e}")
             return {"status": "error", "message": str(e)}
@@ -77,14 +81,13 @@ class TgClient:
     @classmethod
     async def get_chats(cls, session_str: str):
         async with cls._create_client(session_str) as client:
-            count = 0
             chats = []
             async for dialog in client.iter_dialogs():
+                title = dialog.name or "Без названия"
                 if dialog.is_group:
-                    logger.info(f"--- Нашел чат: {dialog.name} (ID: {dialog.id})")
-                    chats.append({"id": dialog.id, "name": dialog.name})
-                    count += 1
-            logger.info(f"Всего найдено чатов: {count}")
+                    logger.info(f"--- Чат: {title} (ID: {dialog.id}, {"group"})")
+                    chats.append({"id": dialog.id, "name": title, "kind": "group"})
+            logger.info(f"Всего найдено чатов: {len(chats)}")
             return chats
 
     @classmethod
